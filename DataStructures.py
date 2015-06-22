@@ -1,4 +1,4 @@
-from enum import Enum;
+from enum import Enum
 
 class Piece:
     privileged = False
@@ -18,6 +18,17 @@ class Direction(Enum):
     right = 2
     down = 3
     left = 4
+
+class Move():
+    direction = 0
+    piece_num = 0
+
+    def __init__(self, piece, direction):
+        self.piece_num = piece
+        self.direction = direction
+
+    def __str__(self):
+        return "Move piece {0} in direction {1}".format(self.piece_num, self.direction)
 
 class Board:
     # board is a 2d array, with 0 an empty space, 1 a space occupied by the privileged block, then natural numbers for
@@ -93,6 +104,68 @@ class Board:
         enumerated = [(x, y) for x in range(self.board_height) for y in range(self.board_height)]
         return [coords for coords in enumerated if self.board[coords[0]][coords[1]] == piece_number]
 
+    def move_allowed(self, piece_number, direction):
+        piece_coordinates = self.coords_of_piece(piece_number)
+
+        bottom = max([coords[0] for coords in piece_coordinates])
+        top = min([coords[0] for coords in piece_coordinates])
+        left = min([coords[1] for coords in piece_coordinates])
+        right = max([coords[1] for coords in piece_coordinates])
+
+        try:
+            if direction == Direction.up and left != right:
+                raise Exception("Tried to move a piece up, but the piece has width greater than 1.")
+            elif direction == Direction.down and left != right:
+                raise Exception("Tried to move a piece down, but the piece has width greater than 1.")
+            elif direction == Direction.right and top != bottom:
+                raise Exception("Tried to move a piece right, but the piece has height greater than 1.")
+            elif direction == Direction.left and top != bottom:
+                raise Exception("Tried to move a piece left, but the piece has height greater than 1.")
+
+            if direction == Direction.down:
+                if bottom < self.board_height - 1:
+                    if self.board[bottom+1][left] == 0:
+                        pass
+                    else:
+                        raise Exception("Tried to move piece {0} down but it would be moving into a piece.".format(piece_number))
+                else:
+                    raise Exception("Tried to move piece {0} down but it is at the bottom already.".format(piece_number))
+            elif direction == Direction.up:
+                if top > 0:
+                    if self.board[top-1][left] == 0:
+                        pass
+                    else:
+                        raise Exception("Tried to move piece {0} up but it would be moving into a piece.".format(piece_number))
+                else:
+                    raise Exception("Tried to move piece {0} up but it is at the top already.".format(piece_number))
+            elif direction == Direction.left:
+                if left > 0:
+                    if self.board[top][left-1] == 0:
+                        pass
+                    else:
+                        raise Exception("Tried to move piece {0} left but it would be moving into a piece.".format(piece_number))
+                else:
+                    raise Exception("Tried to move piece {0} left but it is already on the edge.".format(piece_number))
+            elif direction == Direction.right:
+                if right < self.board_width - 1:
+                    if self.board[top][right+1] == 0:
+                        pass
+                    else:
+                        raise Exception("Tried to move piece {0} right but it would be moving into a piece.".format(piece_number))
+
+                else:
+                    raise Exception("Tried to move piece {0} left but it is already on the edge.".format(piece_number))
+        except:
+            return False
+
+        return True
+
+    def slide_piece(self, move):
+        """
+        Makes a move but with a Move object input rather than separate piece-number and direction.
+        """
+        self.slide_piece(piece_number=move.piece_num, direction=move.direction)
+
     def slide_piece(self, piece_number, direction):
         """
         Alters the board so that the piece with specified number moves in the specified direction.
@@ -105,61 +178,55 @@ class Board:
         elif piece_number < 0:
             raise Exception("Attempted to move a negative-numbered piece ({0}).".format(piece_number))
 
-        piece_coordinates = self.coords_of_piece(piece_number)
+        if self.move_allowed(piece_number, direction):
 
-        bottom = max([coords[0] for coords in piece_coordinates])
-        top = min([coords[0] for coords in piece_coordinates])
-        left = min([coords[1] for coords in piece_coordinates])
-        right = max([coords[1] for coords in piece_coordinates])
+            piece_coordinates = self.coords_of_piece(piece_number)
 
-        # check whether we're moving the piece in a valid direction for its shape
-        if direction == Direction.up and left != right:
-            raise Exception("Tried to move a piece up, but the piece has width greater than 1.")
-        elif direction == Direction.down and left != right:
-            raise Exception("Tried to move a piece down, but the piece has width greater than 1.")
-        elif direction == Direction.right and top != bottom:
-            raise Exception("Tried to move a piece right, but the piece has height greater than 1.")
-        elif direction == Direction.left and top != bottom:
-            raise Exception("Tried to move a piece left, but the piece has height greater than 1.")
+            bottom = max([coords[0] for coords in piece_coordinates])
+            top = min([coords[0] for coords in piece_coordinates])
+            left = min([coords[1] for coords in piece_coordinates])
+            right = max([coords[1] for coords in piece_coordinates])
 
-        # attempt to move the piece, checking whether there is a place to move it in
-        if direction == Direction.down:
-            if bottom < self.board_height - 1:
-                if self.board[bottom+1][left] == 0:
-                    self.board[bottom+1][left] = piece_number
-                    self.board[top][left] = 0
-                else:
-                    raise Exception("Tried to move piece {0} down but it would be moving into a piece.".format(piece_number))
-            else:
-                raise Exception("Tried to move piece {0} down but it is at the bottom already.".format(piece_number))
-        elif direction == Direction.up:
-            if top > 0:
-                if self.board[top-1][left] == 0:
-                    self.board[top-1][left] = piece_number
-                    self.board[bottom][left] = 0
-                else:
-                    raise Exception("Tried to move piece {0} up but it would be moving into a piece.".format(piece_number))
-            else:
-                raise Exception("Tried to move piece {0} up but it is at the top already.".format(piece_number))
-        elif direction == Direction.left:
-            if left > 0:
-                if self.board[top][left-1] == 0:
-                    self.board[top][left-1] = piece_number
-                    self.board[top][right] = 0
-                else:
-                    raise Exception("Tried to move piece {0} left but it would be moving into a piece.".format(piece_number))
-            else:
-                raise Exception("Tried to move piece {0} left but it is already on the edge.".format(piece_number))
-        elif direction == Direction.right:
-            if right < self.board_width - 1:
-                if self.board[top][right+1] == 0:
-                    self.board[top][right+1] = piece_number
-                    self.board[top][left] = 0
-                else:
-                    raise Exception("Tried to move piece {0} right but it would be moving into a piece.".format(piece_number))
+            if direction == Direction.down:
+                self.board[bottom+1][left] = piece_number
+                self.board[top][left] = 0
+            elif direction == Direction.up:
+                self.board[top-1][left] = piece_number
+                self.board[bottom][left] = 0
+            elif direction == Direction.left:
+                self.board[top][left-1] = piece_number
+                self.board[top][right] = 0
+            elif direction == Direction.right:
+                self.board[top][right+1] = piece_number
+                self.board[top][left] = 0
 
-            else:
-                raise Exception("Tried to move piece {0} left but it is already on the edge.".format(piece_number))
+    def find_available_moves(self):
+        """
+        Produces a list of Move objects corresponding to how each piece can move.
+        """
+
+        avail = []  # will be a list: [[Move(1, dir), Move(1, dir)], [Move(2, dir)], …]
+
+        for piece in range(self.blocks_num):
+            # find how piece+1 can move
+            piece_coordinates = self.coords_of_piece(piece+1)
+            bottom = max([coords[0] for coords in piece_coordinates])
+            top = min([coords[0] for coords in piece_coordinates])
+            left = min([coords[1] for coords in piece_coordinates])
+            right = max([coords[1] for coords in piece_coordinates])
+
+            allowable = [Direction.left, Direction.right, Direction.up, Direction.down]
+            if bottom != top:
+                # we can't move left or right
+                allowable.remove(Direction.left)
+                allowable.remove(Direction.right)
+            if left != right:
+                allowable.remove(Direction.up)
+                allowable.remove(Direction.down)
+
+            avail.append([Move(piece+1, direction=direc) for direc in allowable if self.move_allowed(piece+1, direc)])
+
+        return [m for piece in avail for m in piece]
 
 
 pieces = [Piece([(0,4), (1,4), (2,4)]),
@@ -169,6 +236,10 @@ pieces = [Piece([(0,4), (1,4), (2,4)]),
 board = Board(pieces, exit_pos=2, board_width=6, board_height=6)
 print(str(board))
 
+print("Which pieces can move where?")
+print([str(m) for m in board.find_available_moves()])
+
+print("Solution follows.")
 
 board.slide_piece(1, Direction.left)
 print(str(board))
