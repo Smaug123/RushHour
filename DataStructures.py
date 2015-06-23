@@ -19,6 +19,18 @@ class Direction(Enum):
     down = 3
     left = 4
 
+
+def opposite_direction(direction):
+    if direction == Direction.up:
+        return Direction.down
+    elif direction == Direction.down:
+        return Direction.up
+    elif direction == Direction.left:
+        return Direction.right
+    elif direction == Direction.right:
+        return Direction.left
+
+
 class Move():
     direction = 0
     piece_num = 0
@@ -160,17 +172,26 @@ class Board:
 
         return True
 
-    def slide_piece(self, move):
+    def slide_piece(self, move=None, piece_number=None, direction=None):
         """
-        Makes a move but with a Move object input rather than separate piece-number and direction.
+        Returns the board state when the given slide is made on the board. Does not alter the board.
         """
-        self.slide_piece(piece_number=move.piece_num, direction=move.direction)
+        if move is not None:
+            return self.slide_piece(piece_number=move.piece_num, direction=move.direction)
+        backup_board = self.board
+        self.slide_piece_in_place(piece_number, direction)
+        new_board = self.board
+        self.board = backup_board
+        return new_board
 
-    def slide_piece(self, piece_number, direction):
+    def slide_piece_in_place(self, move=None, piece_number=None, direction=None):
         """
         Alters the board so that the piece with specified number moves in the specified direction.
         direction should be a Direction enum.
         """
+        if move is not None:
+            self.slide_piece_in_place(piece_number=move.piece_num, direction=move.direction)
+            return
 
         # check if we're moving an existent piece
         if piece_number > self.blocks_num:
@@ -228,6 +249,15 @@ class Board:
 
         return [m for piece in avail for m in piece]
 
+    def is_solved(self):
+        """
+        Returns True iff the board may be solved in one move.
+        """
+        piece_coordinates = self.coords_of_piece(1)
+
+        return max([coords[0] for coords in piece_coordinates]) == self.exit_position and \
+               max([coords[1] for coords in piece_coordinates]) == self.board_width-1
+
 
 pieces = [Piece([(0,4), (1,4), (2,4)]),
           Piece([(2,2),(2,3)], is_privileged=True),
@@ -241,18 +271,21 @@ print([str(m) for m in board.find_available_moves()])
 
 print("Solution follows.")
 
-board.slide_piece(1, Direction.left)
+board.slide_piece_in_place(piece_number=1, direction=Direction.left)
 print(str(board))
-board.slide_piece(3, Direction.up)
+board.slide_piece_in_place(piece_number=3, direction=Direction.up)
 print(str(board))
-board.slide_piece(4, Direction.left)
-board.slide_piece(4, Direction.left)
-board.slide_piece(4, Direction.left)
+board.slide_piece_in_place(piece_number=4, direction=Direction.left)
+board.slide_piece_in_place(piece_number=4, direction=Direction.left)
+board.slide_piece_in_place(piece_number=4, direction=Direction.left)
 print(str(board))
-board.slide_piece(3, Direction.down)
-board.slide_piece(2, Direction.down)
-board.slide_piece(2, Direction.down)
-board.slide_piece(2, Direction.down)
+board.slide_piece_in_place(piece_number=3, direction=Direction.down)
+board.slide_piece_in_place(piece_number=2, direction=Direction.down)
+board.slide_piece_in_place(piece_number=2, direction=Direction.down)
+board.slide_piece_in_place(piece_number=2, direction=Direction.down)
 print(str(board))
-board.slide_piece(1, Direction.right)
+board.slide_piece_in_place(piece_number=1, direction=Direction.right)
+board.slide_piece_in_place(piece_number=1, direction=Direction.right)
+board.slide_piece_in_place(piece_number=1, direction=Direction.right)
 print(str(board))
+print("Solved!" if board.is_solved() else "Not solved.")
